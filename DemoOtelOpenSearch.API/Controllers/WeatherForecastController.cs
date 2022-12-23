@@ -1,6 +1,4 @@
-using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Sentry;
 
 namespace DemoOtelOpenSearch.API.Controllers;
 
