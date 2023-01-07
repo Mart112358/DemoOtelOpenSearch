@@ -27,6 +27,9 @@ public class WeatherForecastController : ControllerBase
     [HttpGet("hello")]
     public string SayHello()
     {
+        if (Random.Shared.Next(2) == 1)
+            throw new Exception();
+        
         return "Hello World";
     }
     
@@ -51,7 +54,7 @@ public class WeatherForecastController : ControllerBase
             })
             .ToArray();
 
-        _logger.LogError(
+        _logger.LogInformation(
             "WeatherForecasts generated {count}: {forecasts}",
             forecasts.Length,
             forecasts);

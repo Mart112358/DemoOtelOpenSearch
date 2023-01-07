@@ -1,7 +1,0 @@
-simple-sample-pipeline:
-  workers: 2
-  delay: "5000"
-  source:
-    random:
-  sink:
-    - stdout:

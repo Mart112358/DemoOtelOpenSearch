@@ -2,18 +2,17 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using DemoOtelOpenSearch.API.Controllers;
 using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpClient<WeatherForecastController>();
 
-
-builder.Logging.ClearProviders();
 
 // Define some important constants to initialize tracing with
 const string serviceName = "DemoOtelOpenSearch.API";
@@ -23,57 +22,45 @@ var activitySource = new ActivitySource(serviceName);
 var appResourceBuilder = ResourceBuilder.CreateDefault()
     .AddService(serviceName: serviceName, serviceVersion: serviceVersion);
 
-builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
+builder.Logging.ClearProviders();
+builder.Host.UseSerilog((_, loggerConfiguration) =>
 {
-    openTelemetryLoggerOptions.IncludeScopes = true;
-    openTelemetryLoggerOptions.IncludeFormattedMessage = true;
-    openTelemetryLoggerOptions.ParseStateValues = true;
-    
-    openTelemetryLoggerOptions
-        .AddConsoleExporter()
-        .AddOtlpExporter(opt =>
-        {
-            var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
-            opt.Endpoint = new Uri(endpoint!);
-            opt.Protocol = OtlpExportProtocol.Grpc;
-        })
-        .SetResourceBuilder(appResourceBuilder);
+    loggerConfiguration
+        .Enrich.FromLogContext()
+        .WriteTo.Console(new JsonFormatter());
 });
 
-// Configure to send data via the OTLP exporter.
-// By default, it will send to port 4318, which the collector is listening on.
+
 builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
 {
     tracerProviderBuilder
-        .AddConsoleExporter()
+        .AddSource(activitySource.Name)
+        .SetResourceBuilder(appResourceBuilder)
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
         .AddOtlpExporter(opt =>
         {
             var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
             opt.Endpoint = new Uri(endpoint!);
             opt.Protocol = OtlpExportProtocol.Grpc;
-        })
-        .AddSource(activitySource.Name)
-        .SetResourceBuilder(appResourceBuilder)
-        .AddHttpClientInstrumentation()
-        .AddAspNetCoreInstrumentation()
-        .AddSqlClientInstrumentation();
+        });
 });
 
 var meter = new Meter(serviceName);
+
 builder.Services.AddOpenTelemetryMetrics(metricProviderBuilder =>
 {
-    metricProviderBuilder
-        //.AddConsoleExporter()
-        .AddOtlpExporter(opt =>
-        {
-            var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
-            opt.Endpoint = new Uri(endpoint!);
-            opt.Protocol = OtlpExportProtocol.Grpc;
-        })
-        .AddMeter(meter.Name)
-        .SetResourceBuilder(appResourceBuilder)
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation();
+    metricProviderBuilder.AddHttpClientInstrumentation();
+    metricProviderBuilder.AddAspNetCoreInstrumentation();
+    metricProviderBuilder.AddMeter(meter.Name);
+    metricProviderBuilder.AddOtlpExporter(opt =>
+    {
+        var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
+        opt.Endpoint = new Uri(endpoint!);
+        opt.Protocol = OtlpExportProtocol.Grpc;
+    });
+
+    // metricProviderBuilder.SetResourceBuilder(appResourceBuilder);
 });
 
 builder.Services.AddControllers();
