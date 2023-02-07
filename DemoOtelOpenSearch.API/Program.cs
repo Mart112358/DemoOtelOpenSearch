@@ -31,6 +31,27 @@ builder.Host.UseSerilog((_, loggerConfiguration) =>
 });
 
 
+// builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
+// {
+//     openTelemetryLoggerOptions.IncludeScopes = true;
+//     openTelemetryLoggerOptions.IncludeFormattedMessage = true;
+//     openTelemetryLoggerOptions.ParseStateValues = true;
+//     
+//     openTelemetryLoggerOptions
+//         .AddConsoleExporter()
+//         .SetResourceBuilder(appResourceBuilder)
+//         .AddOtlpExporter(opt =>
+//         {
+//             // var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:HttpEndpoint");
+//             // opt.Endpoint = new Uri(endpoint!);
+//             // opt.Protocol = OtlpExportProtocol.HttpProtobuf;
+//             
+//             var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
+//             opt.Endpoint = new Uri(endpoint!);
+//             opt.Protocol = OtlpExportProtocol.Grpc;            
+//         });
+// });
+
 builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
 {
     tracerProviderBuilder
@@ -50,6 +71,7 @@ var meter = new Meter(serviceName);
 
 builder.Services.AddOpenTelemetryMetrics(metricProviderBuilder =>
 {
+    metricProviderBuilder.SetResourceBuilder(appResourceBuilder);
     metricProviderBuilder.AddHttpClientInstrumentation();
     metricProviderBuilder.AddAspNetCoreInstrumentation();
     metricProviderBuilder.AddMeter(meter.Name);
@@ -59,8 +81,6 @@ builder.Services.AddOpenTelemetryMetrics(metricProviderBuilder =>
         opt.Endpoint = new Uri(endpoint!);
         opt.Protocol = OtlpExportProtocol.Grpc;
     });
-
-    // metricProviderBuilder.SetResourceBuilder(appResourceBuilder);
 });
 
 builder.Services.AddControllers();

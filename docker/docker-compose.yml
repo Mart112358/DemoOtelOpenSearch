@@ -13,18 +13,53 @@ services:
       - fluentbit
     logging:
       driver: fluentd
-      
+
   demo-otel-opensearch-worker:
     build:
       context: ../
       dockerfile: DemoOtelOpenSearch.Worker/Dockerfile
-    depends_on:
+    links:
       - demo-otel-opensearch-api
     environment:
       - DemoOtelOpenSearchAPI=http://demo-otel-opensearch-api/weatherforecast
+
+#  otel-collector:
+#    container_name: otel-collector
+#    image: otel/opentelemetry-collector:0.69.0
+#    command: ['--config=/etc/otel-collector-config.yaml']
+#    volumes:
+#      - ./configs/otel-collector.yaml:/etc/otel-collector-config.yaml
+#    ports:
+#      - '4318:4318' #OTLP receiver
+#      - '4317:4317' #OTLP receiver GRPC
+#      - '13133:13133' #health_check extension
+
+  fluentbit:
+    container_name: fluentbit
+    image: fluent/fluent-bit:2.0.9
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      - "4318:4318"
+    volumes:
+      - ./configs/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./configs/parsers.conf:/fluent-bit/etc/parsers.conf
+      
+#  data-prepper:
+#    platform: linux/amd64
+#    container_name: data-prepper
+#    image: opensearchproject/data-prepper:2.0.1
+#    links:
+#      - opensearch-node1
+#    ports:
+#      - 4900:4900
+#      - 2021:2021
+#      - 21890:21890
+#    volumes:
+#      - ./configs/data-prepper-pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml        
       
   opensearch-node1:
-    image: opensearchproject/opensearch:2.4.1
+    image: opensearchproject/opensearch:2.5.0
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster
@@ -48,7 +83,7 @@ services:
       - 9600:9600 # required for Performance Analyzer
 
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:2.4.1
+    image: opensearchproject/opensearch-dashboards:2.5.0
     container_name: opensearch-dashboards
     hostname: "opensearch-dashboard"
     ports:
@@ -59,62 +94,6 @@ services:
       - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200"]'
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
 
-  data-prepper:
-    platform: linux/amd64
-    container_name: data-prepper
-    image: opensearchproject/data-prepper:2.0.1
-    links:
-      - opensearch-node1
-    ports:
-      - 4900:4900
-      - 2021:2021
-      - 21890:21890
-    volumes:
-      - ./configs/data-prepper-pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
-
-  otel-collector:
-    container_name: otel-collector
-    image: otel/opentelemetry-collector:0.68.0
-    command: ['--config=/etc/otel-collector-config.yaml']
-    volumes:
-      - ./configs/otel-collector.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - '4318:4318' #OTLP receiver
-      - '4317:4317' #OTLP receiver GRPC
-      - '13133:13133' #health_check extension
-
-  fluentbit:
-    container_name: fluentbit
-    image: fluent/fluent-bit:2.0.8
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
-    volumes:
-      - ./configs/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
-      - ./configs/parsers.conf:/fluent-bit/etc/parsers.conf
-  
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:v2.41.0
-    ports:
-      - 9000:9090
-    volumes:
-      - ./configs/prometheus:/etc/prometheus
-      - prometheus-data:/prometheus
-    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
-
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:9.3.2
-    ports:
-      - 3000:3000
-    restart: unless-stopped
-    volumes:
-      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - grafana-data:/var/lib/grafana
-
 volumes:
   opensearch-data1:
-  prometheus-data:
-  grafana-data:
 

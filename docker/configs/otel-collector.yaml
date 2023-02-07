@@ -14,14 +14,20 @@ receivers:
       grpc:
         endpoint: 0.0.0.0:4317
 exporters:
-  otlp/data-prepper:
-    endpoint: data-prepper:21890
+  otlphttp:
+    endpoint: http://fluentbit:4318
     tls:
       insecure: true
-  otlp/data-prepper-metric:
-    endpoint: data-prepper:21891
-    tls:
-      insecure: true
+    compression: none
+    
+#  otlp/data-prepper:
+#    endpoint: data-prepper:21890
+#    tls:
+#      insecure: true
+#  otlp/data-prepper-metric:
+#    endpoint: data-prepper:21891
+#    tls:
+#      insecure: true
   logging:
     loglevel: debug
 processors:
@@ -29,12 +35,19 @@ processors:
 service:
   extensions: [health_check]
   pipelines:
-    traces:
-      receivers: [otlp]
-      exporters: [otlp/data-prepper, logging]
-      processors: [batch]
-    metrics:
+    logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/data-prepper-metric, logging]
+      exporters: [otlphttp, logging]
+#      exporters: [logging]    
+#    traces:
+#      receivers: [otlp]
+#      processors: [batch]
+#      exporters: [otlp/data-prepper, logging]
+      # exporters: [logging]
+#    metrics:
+#      receivers: [otlp]
+#      processors: [batch]
+#      exporters: [otlp/data-prepper-metric, logging]
+      # exporters: [logging]
 
