@@ -1,0 +1,96 @@
+<system>
+    log_level trace
+</system>
+
+<source>
+    @type forward
+    bind 0.0.0.0
+    port 24224
+    tag docker
+</source>
+
+<filter docker.**>
+    @type parser
+    key_name log
+    reserve_data true
+    hash_value_field log
+    <parse>
+        @type json
+        time_key date
+        keep_time_key true
+        time_format %d/%b/%Y:%H:%M:%S %z
+    </parse>    
+</filter>
+
+# <filter docker.**>
+#     @type parser
+#     format json
+#     key_name log
+#     reserve_data true
+#     hash_value_field log
+# </filter>
+
+<match docker.**>
+    @type stdout    
+</match>
+
+<match docker.**>
+    @type opensearch
+    host opensearch-node1
+    scheme http
+    ssl_verify false
+    port 9200
+#     suppress_type_name true
+#     index_name app-logs
+#     index_name app-logs-%Y.%m.%d    
+</match>
+
+# <filter docker>
+#     @type parser
+#     key_name log
+#     reserve_data true
+#     <parse>
+# #         Name         docker
+# #         Format       json
+# #         Time_Key     date
+# #         Time_Format  %Y-%m-%dT%H:%M:%S.%L
+# #         Time_Keep    On
+# #         # Command      |  Decoder | Field | Optional Action
+# #         # =============|==================|=================
+# #         Decode_Field_As   escaped_utf8    log    do_next
+# #         Decode_Field_As   json       log
+#         @type json
+#         time_key date       
+#         time_format %Y-%m-%dT%H:%M:%S.%L
+#         keep_time_key true
+#     </parse>
+# </filter>
+
+# [FILTER]
+#     Name         parser
+#     Parser       docker
+#     Match        *
+#     Key_Name     log
+#     Reserve_Data On
+#     
+# [FILTER]
+#     Name nest
+#     Match *
+#     Operation lift
+#     Nested_under Properties
+#     Remove_prefix NESTED
+#     
+# 
+# [FILTER]
+#     Name modify
+#     Match *
+#     Rename TraceId traceId   
+#     
+# [OUTPUT]
+#     Name  opensearch
+#     Match *
+#     Host  opensearch-node1
+#     Port  9200
+#     Index app-logs-%Y.%m.%d
+#     Suppress_Type_Name On
+#     Trace_Error On

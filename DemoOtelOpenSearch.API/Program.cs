@@ -1,11 +1,6 @@
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using DemoOtelOpenSearch.API.Controllers;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Enrichers.Span;
 using Serilog.Formatting.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,55 +8,54 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddHttpClient<WeatherForecastController>();
 
-
 // Define some important constants to initialize tracing with
-const string serviceName = "DemoOtelOpenSearch.API";
-const string serviceVersion = "1.0.0";
-var activitySource = new ActivitySource(serviceName);
-
-var appResourceBuilder = ResourceBuilder.CreateDefault()
-    .AddService(serviceName: serviceName, serviceVersion: serviceVersion);
+// const string serviceName = "DemoOtelOpenSearch.API";
+// const string serviceVersion = "1.0.0";
+// var activitySource = new ActivitySource(serviceName);
+//
+// var appResourceBuilder = ResourceBuilder.CreateDefault()
+//     .AddService(serviceName: serviceName, serviceVersion: serviceVersion);
 
 builder.Logging.ClearProviders();
 builder.Host.UseSerilog((_, loggerConfiguration) =>
 {
     loggerConfiguration
         .Enrich.FromLogContext()
+        .Enrich.WithSpan()
         .WriteTo.Console(new JsonFormatter());
 });
 
-
-builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
-{
-    tracerProviderBuilder
-        .AddSource(activitySource.Name)
-        .SetResourceBuilder(appResourceBuilder)
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddOtlpExporter(opt =>
-        {
-            var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
-            opt.Endpoint = new Uri(endpoint!);
-            opt.Protocol = OtlpExportProtocol.Grpc;
-        });
-});
-
-var meter = new Meter(serviceName);
-
-builder.Services.AddOpenTelemetryMetrics(metricProviderBuilder =>
-{
-    metricProviderBuilder.AddHttpClientInstrumentation();
-    metricProviderBuilder.AddAspNetCoreInstrumentation();
-    metricProviderBuilder.AddMeter(meter.Name);
-    metricProviderBuilder.AddOtlpExporter(opt =>
-    {
-        var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
-        opt.Endpoint = new Uri(endpoint!);
-        opt.Protocol = OtlpExportProtocol.Grpc;
-    });
-
-    // metricProviderBuilder.SetResourceBuilder(appResourceBuilder);
-});
+// builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
+// {
+//     tracerProviderBuilder
+//         .AddSource(activitySource.Name)
+//         .SetResourceBuilder(appResourceBuilder)
+//         .AddAspNetCoreInstrumentation()
+//         .AddHttpClientInstrumentation()
+//         .AddOtlpExporter(opt =>
+//         {
+//             var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
+//             opt.Endpoint = new Uri(endpoint!);
+//             opt.Protocol = OtlpExportProtocol.Grpc;
+//         });
+// });
+//
+// var meter = new Meter(serviceName);
+//
+// builder.Services.AddOpenTelemetryMetrics(metricProviderBuilder =>
+// {
+//     metricProviderBuilder.AddHttpClientInstrumentation();
+//     metricProviderBuilder.AddAspNetCoreInstrumentation();
+//     metricProviderBuilder.AddMeter(meter.Name);
+//     metricProviderBuilder.AddOtlpExporter(opt =>
+//     {
+//         var endpoint = builder.Configuration.GetValue<string>("OpenTelemetry:gRPCEndpoint");
+//         opt.Endpoint = new Uri(endpoint!);
+//         opt.Protocol = OtlpExportProtocol.Grpc;
+//     });
+//
+//     // metricProviderBuilder.SetResourceBuilder(appResourceBuilder);
+// });
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

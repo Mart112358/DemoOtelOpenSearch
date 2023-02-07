@@ -22,14 +22,14 @@ public class Worker : BackgroundService
             var requestUri = _configuration.GetValue<string>("DemoOtelOpenSearchAPI");
             var httpResponseMessage = await _httpClient
                 .GetAsync(requestUri, stoppingToken);
-
+            
             if (httpResponseMessage.IsSuccessStatusCode)
             {
                 var content = await httpResponseMessage.Content.ReadAsStringAsync(stoppingToken);
                 _logger.LogInformation(content);                
             }
             
-            // _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+            _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             await Task.Delay(1000, stoppingToken);
         }
     }
