@@ -26,15 +26,27 @@ services:
       - DemoOtelOpenSearchAPI=http://demo-otel-opensearch-api/weatherforecast
 
   fluentd:
-    build:
-      context: fluentd
-      dockerfile: Dockerfile
+    image: fluent/fluentd:v1.15.3-debian-1.1
     ports:
       - "24224:24224"
       - "24224:24224/udp"
     volumes:
       - ./configs/fluent.conf:/fluentd/etc/fluent.conf
-
+        
+  data-prepper:
+    platform: linux/amd64
+    container_name: data-prepper
+    image: opensearchproject/data-prepper:2.0.1
+    links:
+      - opensearch-node1
+    ports:
+      - 4900:4900
+      - 2021:2021
+      - 21890:21890
+    volumes:
+      - ./configs/data-prepper-pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml        
+    restart: unless-stopped
+    
   opensearch-node1:
     image: opensearchproject/opensearch:2.5.0
     container_name: opensearch-node1
