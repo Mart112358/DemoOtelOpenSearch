@@ -1,4 +1,5 @@
-version: "3"
+name: DemoOtelOpenSearch
+
 services:
   demo-otel-opensearch-api:
     build:
@@ -13,6 +14,8 @@ services:
       - fluentbit
     logging:
       driver: fluentd
+      options:
+        fluentd-async: "true"
       
   demo-otel-opensearch-worker:
     build:
